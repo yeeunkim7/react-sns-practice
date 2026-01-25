@@ -12,13 +12,17 @@ export function usePostByIdData({
 }) {
   const session = useSession();
 
+  const userId = session?.user.id;
+
   return useQuery({
     queryKey: QUERY_KEYS.post.byId(postId),
+
     queryFn: () =>
       fetchPostById({
         postId,
-        userId: session!.user.id,
+        userId: userId!, 
       }),
-    enabled: type === "FEED" ? false : true,
+
+    enabled: Number.isFinite(postId) && !!userId,
   });
 }
