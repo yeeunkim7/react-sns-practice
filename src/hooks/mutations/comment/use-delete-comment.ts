@@ -1,64 +1,27 @@
-import supabase from "@/lib/supabase";
+import { deleteComment } from "@/api/comment";
+import { QUERY_KEYS } from "@/lib/constants";
+import type { Comment, UseMutationCallback } from "@/types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export async function fetchComments(postId: number) {
-  const { data, error } = await supabase
-    .from("comment")
-    .select("*, author: profile!author_id (*)")
-    .eq("post_id", postId)
-    .order("created_at", { ascending: false });
+export function useDeleteComment(callbacks?: UseMutationCallback) {
+  const queryClient = useQueryClient();
 
-  if (error) throw error;
-  return data;
-}
+  return useMutation({
+    mutationFn: deleteComment,
+    onSuccess: (deletedComment) => {
+      if (callbacks?.onSuccess) callbacks.onSuccess();
 
-export async function createComment({
-  postId,
-  content,
-}: {
-  postId: number;
-  content: string;
-}) {
-  const { data, error } = await supabase
-    .from("comment")
-    .insert({
-      post_id: postId,
-      content: content,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-export async function updateComment({
-  id,
-  content,
-}: {
-  id: number;
-  content: string;
-}) {
-  const { data, error } = await supabase
-    .from("comment")
-    .update({
-      content,
-    })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteComment(id: number) {
-  const { data, error } = await supabase
-    .from("comment")
-    .delete()
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+      queryClient.setQueryData<Comment[]>(
+        QUERY_KEYS.comment.post(deletedComment.post_id),
+        (comments) => {
+          if (!comments)
+            throw new Error("댓글이 캐시 데이터에 보관되어 있지 않습니다.");
+          return comments.filter((comment) => comment.id !== deletedComment.id);
+        },
+      );
+    },
+    onError: (error) => {
+      if (callbacks?.onError) callbacks.onError(error);
+    },
+  });
 }
