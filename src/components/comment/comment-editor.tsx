@@ -1,8 +1,8 @@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { useCreateComment } from "@/hooks/mutations/comment/use-create-comment";
 import { toast } from "sonner";
+import { useCreateComment } from "@/hooks/mutations/comment/use-create-comment";
 import { useUpdateComment } from "@/hooks/mutations/comment/use-update-comment";
 
 type CreateMode = {
@@ -17,13 +17,22 @@ type EditMode = {
   onClose: () => void;
 };
 
-type Props = CreateMode | EditMode;
+type ReplyMode = {
+  type: "REPLY";
+  postId: number;
+  parentCommentId: number;
+  rootCommentId: number;
+  onClose: () => void;
+};
+
+type Props = CreateMode | EditMode | ReplyMode;
 
 export default function CommentEditor(props: Props) {
   const { mutate: createComment, isPending: isCreateCommentPending } =
     useCreateComment({
       onSuccess: () => {
         setContent("");
+        if (props.type === "REPLY") props.onClose();
       },
       onError: (error) => {
         toast.error("댓글 추가에 실패했습니다", {
@@ -60,6 +69,13 @@ export default function CommentEditor(props: Props) {
         postId: props.postId,
         content,
       });
+    } else if (props.type === "REPLY") {
+      createComment({
+        postId: props.postId,
+        content,
+        parentCommentId: props.parentCommentId,
+        rootCommentId: props.rootCommentId,
+      });
     } else {
       updateComment({
         id: props.commentId,
@@ -78,15 +94,16 @@ export default function CommentEditor(props: Props) {
         onChange={(e) => setContent(e.target.value)}
       />
       <div className="flex justify-end gap-2">
-        {props.type === "EDIT" && (
-          <Button
-            disabled={isPending}
-            variant={"outline"}
-            onClick={() => props.onClose()}
-          >
-            취소
-          </Button>
-        )}
+        {props.type === "EDIT" ||
+          (props.type === "REPLY" && (
+            <Button
+              disabled={isPending}
+              variant={"outline"}
+              onClick={() => props.onClose()}
+            >
+              취소
+            </Button>
+          ))}
         <Button disabled={isPending} onClick={handleSubmitClick}>
           작성
         </Button>
