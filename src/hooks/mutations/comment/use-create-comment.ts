@@ -24,7 +24,7 @@ export function useCreateComment(callbacks?: UseMutationCallback) {
           if (!profile)
             throw new Error("사용자의 프로필 정보를 찾을 수 없습니다.");
 
-          return [{ ...newComment, author: profile }, ...comments];
+          return [...comments, { ...newComment, author: profile }];
         },
       );
     },
